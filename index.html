@@ -2,8 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
-<title>CHECK-IN</title>
+<title>CHECK-IN INSTANT</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 
@@ -25,13 +24,10 @@ body{
   font-weight:bold;
 }
 
-/* 🔥 OVERLAY */
 #overlay{
   position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
+  top:0;left:0;
+  width:100%;height:100%;
   display:none;
   justify-content:center;
   align-items:center;
@@ -39,23 +35,11 @@ body{
   font-weight:bold;
   color:white;
   z-index:9999;
-  animation: fadeIn 0.15s ease-in;
 }
 
-#overlay.success{
-  background:rgba(0, 200, 0, 0.9);
-}
-
-#overlay.error{
-  background:rgba(255, 0, 0, 0.9);
-}
-
-@keyframes fadeIn{
-  from{opacity:0;}
-  to{opacity:1;}
-}
+#overlay.success{background:rgba(0,200,0,0.9);}
+#overlay.error{background:rgba(255,0,0,0.9);}
 </style>
-
 </head>
 
 <body>
@@ -64,140 +48,88 @@ body{
 
 <div id="reader"></div>
 <div id="hasil"></div>
-
 <div id="overlay"></div>
 
-<!-- 🔊 AUDIO -->
-<audio id="beepSuccess" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
+<!-- AUDIO -->
+<audio id="ok">
+  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
 </audio>
 
-<audio id="beepDuplicate" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" type="audio/ogg">
-</audio>
-
-<audio id="beepError" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
+<audio id="no">
+  <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg">
 </audio>
 
 <script>
 
-let isProcessing = false;
-let lastScan = 0;
 let scanner;
-
-// 🔓 unlock audio
-document.addEventListener("click", () => {
-  [beepSuccess, beepDuplicate, beepError].forEach(a => {
-    try{
-      a.play().then(()=>{ a.pause(); a.currentTime = 0; });
-    }catch(e){}
-  });
-}, { once:true });
+let busy = false;
 
 // 🔊 sound
-function playSound(type){
-  let audio;
-
-  if(type === "success"){
-    audio = document.getElementById("beepSuccess");
-  }
-  else if(type === "duplicate"){
-    audio = document.getElementById("beepDuplicate");
-  }
-  else{
-    audio = document.getElementById("beepError");
-  }
-
-  if(!audio) return;
-
-  audio.pause();
-  audio.currentTime = 0;
-
-  audio.play().catch(()=>{});
+function sound(type){
+  let a = document.getElementById(type === "ok" ? "ok" : "no");
+  a.currentTime = 0;
+  a.play().catch(()=>{});
 }
 
 // 🔥 overlay
-function showOverlay(type, text){
-  const overlay = document.getElementById("overlay");
-
-  overlay.className = type;
-  overlay.innerHTML = text;
-  overlay.style.display = "flex";
-
-  setTimeout(() => {
-    overlay.style.display = "none";
-  }, 1000);
+function show(type, text){
+  let o = document.getElementById("overlay");
+  o.className = type;
+  o.innerHTML = text;
+  o.style.display = "flex";
+  setTimeout(()=> o.style.display="none", 800);
 }
 
-// 📷 scan QR (FAST MODE)
-function onScanSuccess(decodedText){
+// 📷 INSTANT SCAN
+async function onScanSuccess(decodedText){
 
-  const now = Date.now();
+  if(busy) return;
+  busy = true;
 
-  // ⚡ anti spam super cepat (0.6 detik)
-  if(now - lastScan < 600) return;
-  lastScan = now;
+  // ⛔ STOP SCANNER SEMENTARA (INI KUNCI SPEED + ANTI DOUBLE)
+  await scanner.pause(true);
 
-  if(isProcessing) return;
-  isProcessing = true;
-
-  fetch(
-    "https://script.google.com/macros/s/AKfycbwLo68xwUnvQogIwIbktbXZi8bHQvN4hfEvxZJ1Y3kidpJq7RfOTmU3PJgISBu5J9Hd/exec",
-    {
-      method:"POST",
-      body:new URLSearchParams({
-        id: decodedText
-      })
-    }
-  )
-  .then(r => r.json())
-  .then(data => {
+  fetch("https://script.google.com/macros/s/AKfycbwLo68xwUnvQogIwIbktbXZi8bHQvN4hfEvxZJ1Y3kidpJq7RfOTmU3PJgISBu5J9Hd/exec",{
+    method:"POST",
+    body:new URLSearchParams({id:decodedText})
+  })
+  .then(r=>r.json())
+  .then(data=>{
 
     if(data.status === "success"){
-      document.getElementById("hasil").innerHTML =
-      "✅ " + data.nama;
-
-      playSound("success");
-      showOverlay("success", "BERHASIL");
+      document.getElementById("hasil").innerHTML="✅ "+data.nama;
+      sound("ok");
+      show("success","BERHASIL");
     }
 
     else if(data.status === "duplicate"){
-      document.getElementById("hasil").innerHTML =
-      "⚠️ " + data.nama + " sudah hadir";
-
-      playSound("duplicate");
-      showOverlay("error", "SUDAH HADIR");
+      document.getElementById("hasil").innerHTML="⚠️ "+data.nama+" sudah hadir";
+      sound("no");
+      show("error","SUDAH HADIR");
     }
 
     else{
-      document.getElementById("hasil").innerHTML =
-      "❌ ID tidak ditemukan";
-
-      playSound("error");
-      showOverlay("error", "TIDAK DITEMUKAN");
+      document.getElementById("hasil").innerHTML="❌ ID tidak ditemukan";
+      sound("no");
+      show("error","TIDAK DITEMUKAN");
     }
 
   })
-  .finally(() => {
+  .finally(async ()=>{
 
-    // ⚡ unlock cepat
-    setTimeout(() => {
-      isProcessing = false;
-    }, 600);
+    // 🚀 langsung hidupkan lagi scanner (NO DELAY FIX)
+    await scanner.resume();
+    busy = false;
 
   });
 
 }
 
-// 📷 init scanner (NO RESTART = FAST)
-scanner = new Html5QrcodeScanner(
-  "reader",
-  {
-    fps:12,
-    qrbox:250
-  }
-);
+// 📷 init scanner (FAST MODE)
+scanner = new Html5QrcodeScanner("reader",{
+  fps: 15,
+  qrbox: 250
+});
 
 scanner.render(onScanSuccess);
 
