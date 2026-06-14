@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Check-in Pernikahan</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+
+body{
+  font-family:Arial,sans-serif;
+  text-align:center;
+  padding:20px;
+}
+
+#reader{
+  max-width:500px;
+  margin:auto;
+}
+
+#hasil{
+  margin-top:20px;
+  font-size:24px;
+  font-weight:bold;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>Check-in Pernikahan</h2>
+
+<div id="reader"></div>
+
+<div id="hasil"></div>
+
+<script>
+
+function onScanSuccess(decodedText){
+
+  document.getElementById("hasil").innerHTML =
+  "QR terbaca: " + decodedText;
+
+}
+
+new Html5QrcodeScanner(
+  "reader",
+  {
+    fps:10,
+    qrbox:250
+  }
+).render(onScanSuccess);
+
+</script>
+
+</body>
+</html>
