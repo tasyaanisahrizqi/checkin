@@ -24,7 +24,6 @@ body{
   font-weight:bold;
 }
 
-/* OVERLAY */
 #overlay{
   position:fixed;
   top:0;left:0;
@@ -67,26 +66,8 @@ button{
 <div id="hasil"></div>
 <div id="overlay"></div>
 
-<!-- 🔥 MODE (UBAH INI) -->
 <script>
-const MODE = "checkin"; 
-// "checkin" atau "souvenir"
-</script>
-
-<!-- 🔊 AUDIO -->
-<audio id="ok" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
-</audio>
-
-<audio id="dup" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" type="audio/ogg">
-</audio>
-
-<audio id="err" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" type="audio/ogg">
-</audio>
-
-<script>
+const MODE = "checkin"; // ganti ke "souvenir"
 
 let html5QrCode;
 let cameraList = [];
@@ -96,32 +77,30 @@ let busy = false;
 // 🔊 SOUND
 function sound(type){
 
-  let a;
+  let audio;
 
-  if(type === "ok") a = document.getElementById("ok");
-  else if(type === "dup") a = document.getElementById("dup");
-  else a = document.getElementById("err");
+  if(type === "ok") audio = document.getElementById("ok");
+  else if(type === "dup") audio = document.getElementById("dup");
+  else audio = document.getElementById("err");
 
-  if(!a) return;
-
-  a.pause();
-  a.currentTime = 0;
-  a.play().catch(()=>{});
+  if(audio){
+    audio.pause();
+    audio.currentTime = 0;
+    audio.play().catch(()=>{});
+  }
 }
 
 // 🔥 OVERLAY
 function show(type, text){
-  let o = document.getElementById("overlay");
+  const o = document.getElementById("overlay");
   o.className = type;
   o.innerHTML = text;
   o.style.display = "flex";
 
-  setTimeout(()=>{
-    o.style.display="none";
-  }, 900);
+  setTimeout(()=> o.style.display="none", 900);
 }
 
-// 📷 HANDLE RESULT (MULTI MODE)
+// 📷 HANDLE RESULT
 function handleResult(decodedText){
 
   fetch("https://script.google.com/macros/s/AKfycbwLo68xwUnvQogIwIbktbXZi8bHQvN4hfEvxZJ1Y3kidpJq7RfOTmU3PJgISBu5J9Hd/exec",{
@@ -153,7 +132,6 @@ function handleResult(decodedText){
         sound("err");
         show("error","TIDAK VALID");
       }
-
     }
 
     else if(MODE === "souvenir"){
@@ -215,20 +193,18 @@ function startCamera(camera){
 
   html5QrCode.start(
     camera.id,
-    { fps: 15, qrbox: 250 },
+    { fps: 20, qrbox: 220 },
     (decodedText) => {
 
+      // 🚀 FIX: TANPA PAUSE/RESUME (INI KUNCI STABIL)
       if(busy) return;
       busy = true;
-
-      html5QrCode.pause(true);
 
       handleResult(decodedText);
 
       setTimeout(()=>{
-        html5QrCode.resume();
         busy = false;
-      }, 600);
+      }, 800);
 
     }
   );
@@ -251,6 +227,19 @@ function switchCamera(){
 }
 
 </script>
+
+<!-- AUDIO -->
+<audio id="ok" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
+</audio>
+
+<audio id="dup" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg">
+</audio>
+
+<audio id="err" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg">
+</audio>
 
 </body>
 </html>
