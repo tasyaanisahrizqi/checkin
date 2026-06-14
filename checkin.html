@@ -75,14 +75,19 @@ let cameraList = [];
 let currentCameraIndex = 0;
 let busy = false;
 
-// 🔊 SOUND
 function sound(type){
 
   let a;
 
-  if(type === "ok") a = document.getElementById("ok");
-  else if(type === "dup") a = document.getElementById("dup");
-  else a = document.getElementById("err");
+  if(type === "ok"){
+    a = document.getElementById("ok");
+  }
+  else if(type === "dup"){
+    a = document.getElementById("dup");
+  }
+  else{
+    a = document.getElementById("err");
+  }
 
   if(!a) return;
 
@@ -91,7 +96,6 @@ function sound(type){
   a.play().catch(()=>{});
 }
 
-// 🔥 OVERLAY
 function show(type, text){
   let o = document.getElementById("overlay");
   o.className = type;
@@ -103,7 +107,6 @@ function show(type, text){
   }, 900);
 }
 
-// 📡 SEND DATA
 function handleResult(decodedText){
 
   fetch("https://script.google.com/macros/s/AKfycbxtCw1dooE8WQzb6PKUNIRr8FT2bkzzEfCUJtyj627SE48sgInj6IY7Z2UV4y8RtYksUQ/exec",{
@@ -119,13 +122,13 @@ function handleResult(decodedText){
     if(data.status === "success"){
       document.getElementById("hasil").innerHTML="✅ "+data.nama;
       sound("ok");
-      show("success","BERHASIL CHECK-IN");
+      show("success","BERHASIL");
     }
 
     else if(data.status === "duplicate"){
       document.getElementById("hasil").innerHTML="⚠️ "+data.nama+" sudah hadir";
       sound("dup");
-      show("error","SUDAH CHECK-IN");
+      show("error","SUDAH HADIR");
     }
 
     else{
@@ -138,7 +141,6 @@ function handleResult(decodedText){
 
 }
 
-// CAMERA (SAMA PERSIS)
 Html5Qrcode.getCameras().then(devices => {
 
   cameraList = devices;
