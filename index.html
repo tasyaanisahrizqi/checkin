@@ -58,7 +58,7 @@ body{
 <div id="hasil"></div>
 <div id="overlay"></div>
 
-<!-- 🔊 AUDIO 3 JENIS -->
+<!-- 🔊 AUDIO -->
 <audio id="ok" preload="auto">
   <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
 </audio>
@@ -111,7 +111,7 @@ function show(type, text){
   }, 900);
 }
 
-// 📷 SCAN QR (FAST MODE)
+// 📷 SCAN QR (CAMERA ONLY)
 async function onScanSuccess(decodedText){
 
   if(busy) return;
@@ -154,7 +154,7 @@ async function onScanSuccess(decodedText){
 
 }
 
-// 📷 INIT SCANNER
+// 📷 INIT CAMERA SCANNER ONLY
 scanner = new Html5QrcodeScanner("reader",{
   fps: 15,
   qrbox: 250
