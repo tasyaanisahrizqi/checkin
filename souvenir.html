@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOUVENIR</title>
+
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+body{
+  font-family:Arial,sans-serif;
+  text-align:center;
+  padding:20px;
+}
+
+#reader{
+  max-width:500px;
+  margin:auto;
+}
+
+#hasil{
+  margin-top:20px;
+  font-size:24px;
+  font-weight:bold;
+}
+
+/* OVERLAY */
+#overlay{
+  position:fixed;
+  top:0;left:0;
+  width:100%;height:100%;
+  display:none;
+  justify-content:center;
+  align-items:center;
+  font-size:40px;
+  font-weight:bold;
+  color:white;
+  z-index:9999;
+  animation: fadeIn 0.15s ease-in;
+}
+
+#overlay.success{background:rgba(0,200,0,0.9);}
+#overlay.error{background:rgba(255,0,0,0.9);}
+
+@keyframes fadeIn{
+  from{opacity:0;}
+  to{opacity:1;}
+}
+
+button{
+  margin-top:10px;
+  padding:10px 15px;
+  font-size:16px;
+}
+</style>
+
+</head>
+
+<body>
+
+<h2>SOUVENIR</h2>
+
+<div id="reader"></div>
+
+<button onclick="switchCamera()">🔄 Ganti Kamera</button>
+
+<div id="hasil"></div>
+<div id="overlay"></div>
+
+<script>
+
+const MODE = "souvenir";
+
+let html5QrCode;
+let cameraList = [];
+let currentCameraIndex = 0;
+let busy = false;
+
+// 🔊 SOUND
+function sound(type){
+
+  let a;
+
+  if(type === "ok") a = document.getElementById("ok");
+  else if(type === "dup") a = document.getElementById("dup");
+  else a = document.getElementById("err");
+
+  if(!a) return;
+
+  a.pause();
+  a.currentTime = 0;
+  a.play().catch(()=>{});
+}
+
+// 🔥 OVERLAY
+function show(type, text){
+  let o = document.getElementById("overlay");
+  o.className = type;
+  o.innerHTML = text;
+  o.style.display = "flex";
+
+  setTimeout(()=>{
+    o.style.display="none";
+  }, 900);
+}
+
+// 📡 HANDLE RESULT
+function handleResult(decodedText){
+
+  fetch("https://script.google.com/macros/s/AKfycbxtCw1dooE8WQzb6PKUNIRr8FT2bkzzEfCUJtyj627SE48sgInj6IY7Z2UV4y8RtYksUQ/exec",{
+    method:"POST",
+    body:new URLSearchParams({
+      id: decodedText,
+      mode: MODE
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+
+    if(data.status === "not_checked_in"){
+      document.getElementById("hasil").innerHTML="❌ "+data.nama+" belum hadir";
+      sound("err");
+      show("error","BELUM CHECK-IN");
+    }
+
+    else if(data.status === "already_taken"){
+      document.getElementById("hasil").innerHTML="⚠️ "+data.nama+" sudah ambil souvenir";
+      sound("dup");
+      show("error","SUDAH AMBIL SOUVENIR");
+    }
+
+    else if(data.status === "success"){
+      document.getElementById("hasil").innerHTML="🎁 "+data.nama;
+      sound("ok");
+      show("success","SOUVENIR DIBERIKAN");
+    }
+
+    else{
+      document.getElementById("hasil").innerHTML="❌ ID tidak ditemukan";
+      sound("err");
+      show("error","TIDAK VALID");
+    }
+
+  });
+
+}
+
+// 📷 CAMERA INIT
+Html5Qrcode.getCameras().then(devices => {
+
+  cameraList = devices;
+
+  let backIndex = devices.findIndex(cam =>
+    cam.label.toLowerCase().includes("back") ||
+    cam.label.toLowerCase().includes("rear") ||
+    cam.label.toLowerCase().includes("environment")
+  );
+
+  currentCameraIndex = backIndex !== -1 ? backIndex : 0;
+
+  html5QrCode = new Html5Qrcode("reader");
+
+  startCamera(cameraList[currentCameraIndex]);
+
+});
+
+function startCamera(camera){
+
+  html5QrCode.start(
+    camera.id,
+    { fps: 15, qrbox: 250 },
+    (decodedText) => {
+
+      if(busy) return;
+      busy = true;
+
+      html5QrCode.pause(true);
+
+      handleResult(decodedText);
+
+      setTimeout(()=>{
+        html5QrCode.resume();
+        busy = false;
+      }, 600);
+
+    }
+  );
+
+}
+
+// 🔄 SWITCH CAMERA
+function switchCamera(){
+
+  if(cameraList.length < 2) return;
+
+  html5QrCode.stop().then(()=>{
+
+    currentCameraIndex = (currentCameraIndex + 1) % cameraList.length;
+
+    startCamera(cameraList[currentCameraIndex]);
+
+  });
+
+}
+
+</script>
+
+<!-- AUDIO -->
+<audio id="ok" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
+</audio>
+
+<audio id="dup" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg">
+</audio>
+
+<audio id="err" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/cartoon/pop.ogg">
+</audio>
+
+</body>
+</html>
