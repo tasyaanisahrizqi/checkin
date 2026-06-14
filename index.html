@@ -33,7 +33,7 @@ body{
   align-items:center;
   font-size:40px;
   font-weight:bold;
-  color:#fff;
+  color:white;
   z-index:9999;
 }
 
@@ -48,15 +48,12 @@ body{
 
 <div id="reader"></div>
 
-<button onclick="switchCamera()">🔄 Ganti Kamera</button>
-
 <div id="hasil"></div>
 <div id="overlay"></div>
 
 <script>
 
-const MODE = "checkin"; 
-// ubah ke "souvenir" jika perlu
+const MODE = "checkin";
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzJVJF6yi7JomWVz8svm44FfZsKVYP8xHQ85SoN_uEhjU9MaQJsQh-onB4NrWz7oPc/exec";
 
@@ -65,7 +62,7 @@ let cameras = [];
 let currentCam = 0;
 let busy = false;
 
-// 🔊 SOUND SIMPLE (stabil iOS + Android)
+// 🔊 SOUND SIMPLE (AMAN iOS + Android)
 function beep(type){
   const audio = new Audio(
     type === "ok"
@@ -74,7 +71,6 @@ function beep(type){
       ? "https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"
       : "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg"
   );
-
   audio.play().catch(()=>{});
 }
 
@@ -97,8 +93,17 @@ function handleResult(decodedText){
       mode: MODE
     })
   })
-  .then(r=>r.json())
-  .then(data=>{
+  .then(r => r.text())   // 🔥 PENTING FIX UTAMA
+  .then(txt => {
+
+    let data;
+    try {
+      data = JSON.parse(txt);
+    } catch(e) {
+      document.getElementById("hasil").innerHTML = "❌ ERROR RESPONSE";
+      console.log(txt);
+      return;
+    }
 
     if(MODE === "checkin"){
 
@@ -115,7 +120,7 @@ function handleResult(decodedText){
       }
 
       else{
-        document.getElementById("hasil").innerHTML = "❌ TIDAK VALID";
+        document.getElementById("hasil").innerHTML = "❌ TIDAK DITEMUKAN";
         beep("err");
         show("error","ERROR");
       }
@@ -143,6 +148,10 @@ function handleResult(decodedText){
 
     }
 
+  })
+  .catch(err=>{
+    console.log(err);
+    document.getElementById("hasil").innerHTML = "❌ SERVER ERROR";
   });
 
 }
@@ -172,7 +181,7 @@ function startCamera(camera){
 
   html5QrCode.start(
     camera.id,
-    { fps: 18, qrbox: 220 },
+    { fps: 15, qrbox: 220 },
     (decodedText)=>{
 
       if(busy) return;
@@ -183,21 +192,6 @@ function startCamera(camera){
       setTimeout(()=>busy=false,800);
     }
   );
-
-}
-
-// 🔄 SWITCH CAMERA
-function switchCamera(){
-
-  if(cameras.length < 2) return;
-
-  html5QrCode.stop().then(()=>{
-
-    currentCam = (currentCam + 1) % cameras.length;
-
-    startCamera(cameras[currentCam]);
-
-  });
 
 }
 
