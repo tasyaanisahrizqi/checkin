@@ -39,7 +39,7 @@ body{
   font-weight:bold;
   color:white;
   z-index:9999;
-  animation: fadeIn 0.2s ease-in;
+  animation: fadeIn 0.15s ease-in;
 }
 
 #overlay.success{
@@ -62,8 +62,6 @@ body{
 
 <h2>Check-in Pernikahan</h2>
 
-<p>Tap layar sekali sebelum scan</p>
-
 <div id="reader"></div>
 <div id="hasil"></div>
 
@@ -84,36 +82,20 @@ body{
 
 <script>
 
-let audioUnlocked = false;
 let isProcessing = false;
+let lastScan = 0;
 let scanner;
 
-// 🔓 unlock audio (WAJIB untuk HP)
-function unlockAudio(){
-  if(audioUnlocked) return;
-
-  const sounds = [
-    document.getElementById("beepSuccess"),
-    document.getElementById("beepDuplicate"),
-    document.getElementById("beepError")
-  ];
-
-  sounds.forEach(a => {
-    if(a){
-      a.play().then(() => {
-        a.pause();
-        a.currentTime = 0;
-      }).catch(()=>{});
-    }
+// 🔓 unlock audio
+document.addEventListener("click", () => {
+  [beepSuccess, beepDuplicate, beepError].forEach(a => {
+    try{
+      a.play().then(()=>{ a.pause(); a.currentTime = 0; });
+    }catch(e){}
   });
+}, { once:true });
 
-  audioUnlocked = true;
-}
-
-document.addEventListener("click", unlockAudio);
-document.addEventListener("touchstart", unlockAudio);
-
-// 🔊 PLAY SOUND
+// 🔊 sound
 function playSound(type){
   let audio;
 
@@ -132,12 +114,10 @@ function playSound(type){
   audio.pause();
   audio.currentTime = 0;
 
-  audio.play().catch(err => {
-    console.log("Audio blocked:", err);
-  });
+  audio.play().catch(()=>{});
 }
 
-// 🔥 OVERLAY
+// 🔥 overlay
 function showOverlay(type, text){
   const overlay = document.getElementById("overlay");
 
@@ -147,11 +127,17 @@ function showOverlay(type, text){
 
   setTimeout(() => {
     overlay.style.display = "none";
-  }, 1200);
+  }, 1000);
 }
 
-// 📷 QR SCAN
+// 📷 scan QR (FAST MODE)
 function onScanSuccess(decodedText){
+
+  const now = Date.now();
+
+  // ⚡ anti spam super cepat (0.6 detik)
+  if(now - lastScan < 600) return;
+  lastScan = now;
 
   if(isProcessing) return;
   isProcessing = true;
@@ -195,19 +181,20 @@ function onScanSuccess(decodedText){
   })
   .finally(() => {
 
+    // ⚡ unlock cepat
     setTimeout(() => {
       isProcessing = false;
-    }, 2000);
+    }, 600);
 
   });
 
 }
 
-// 📷 INIT SCANNER
+// 📷 init scanner (NO RESTART = FAST)
 scanner = new Html5QrcodeScanner(
   "reader",
   {
-    fps:10,
+    fps:12,
     qrbox:250
   }
 );
