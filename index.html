@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CHECK-IN</title>
+<title>CHECK-IN SYSTEM</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 
@@ -58,7 +58,7 @@ button{
 
 <body>
 
-<h2>CHECK-IN</h2>
+<h2>CHECK-IN SYSTEM</h2>
 
 <div id="reader"></div>
 
@@ -66,6 +66,12 @@ button{
 
 <div id="hasil"></div>
 <div id="overlay"></div>
+
+<!-- 🔥 MODE (UBAH INI) -->
+<script>
+const MODE = "checkin"; 
+// "checkin" atau "souvenir"
+</script>
 
 <!-- 🔊 AUDIO -->
 <audio id="ok" preload="auto">
@@ -77,7 +83,7 @@ button{
 </audio>
 
 <audio id="err" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/cartoon/pop.ogg" type="audio/ogg">
+  <source src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" type="audio/ogg">
 </audio>
 
 <script>
@@ -92,21 +98,14 @@ function sound(type){
 
   let a;
 
-  if(type === "ok"){
-    a = document.getElementById("ok");
-  }
-  else if(type === "dup"){
-    a = document.getElementById("dup");
-  }
-  else{
-    a = document.getElementById("err");
-  }
+  if(type === "ok") a = document.getElementById("ok");
+  else if(type === "dup") a = document.getElementById("dup");
+  else a = document.getElementById("err");
 
   if(!a) return;
 
   a.pause();
   a.currentTime = 0;
-
   a.play().catch(()=>{});
 }
 
@@ -122,32 +121,66 @@ function show(type, text){
   }, 900);
 }
 
-// 📷 HANDLE RESULT
+// 📷 HANDLE RESULT (MULTI MODE)
 function handleResult(decodedText){
 
   fetch("https://script.google.com/macros/s/AKfycbwLo68xwUnvQogIwIbktbXZi8bHQvN4hfEvxZJ1Y3kidpJq7RfOTmU3PJgISBu5J9Hd/exec",{
     method:"POST",
-    body:new URLSearchParams({id:decodedText})
+    body:new URLSearchParams({
+      id: decodedText,
+      mode: MODE
+    })
   })
   .then(r=>r.json())
   .then(data=>{
 
-    if(data.status === "success"){
-      document.getElementById("hasil").innerHTML="✅ "+data.nama;
-      sound("ok");
-      show("success","BERHASIL");
+    if(MODE === "checkin"){
+
+      if(data.status === "success"){
+        document.getElementById("hasil").innerHTML="✅ "+data.nama;
+        sound("ok");
+        show("success","BERHASIL CHECK-IN");
+      }
+
+      else if(data.status === "duplicate"){
+        document.getElementById("hasil").innerHTML="⚠️ "+data.nama+" sudah hadir";
+        sound("dup");
+        show("error","SUDAH CHECK-IN");
+      }
+
+      else{
+        document.getElementById("hasil").innerHTML="❌ ID tidak ditemukan";
+        sound("err");
+        show("error","TIDAK VALID");
+      }
+
     }
 
-    else if(data.status === "duplicate"){
-      document.getElementById("hasil").innerHTML="⚠️ "+data.nama+" sudah hadir";
-      sound("dup");
-      show("error","SUDAH HADIR");
-    }
+    else if(MODE === "souvenir"){
 
-    else{
-      document.getElementById("hasil").innerHTML="❌ ID tidak ditemukan";
-      sound("err");
-      show("error","TIDAK DITEMUKAN");
+      if(data.status === "not_checked_in"){
+        document.getElementById("hasil").innerHTML="❌ "+data.nama+" belum hadir";
+        sound("err");
+        show("error","BELUM CHECK-IN");
+      }
+
+      else if(data.status === "already_taken"){
+        document.getElementById("hasil").innerHTML="⚠️ "+data.nama+" sudah ambil souvenir";
+        sound("dup");
+        show("error","SUDAH AMBIL");
+      }
+
+      else if(data.status === "success"){
+        document.getElementById("hasil").innerHTML="🎁 "+data.nama;
+        sound("ok");
+        show("success","SOUVENIR DIBERIKAN");
+      }
+
+      else{
+        document.getElementById("hasil").innerHTML="❌ ID tidak ditemukan";
+        sound("err");
+        show("error","TIDAK VALID");
+      }
     }
 
   });
