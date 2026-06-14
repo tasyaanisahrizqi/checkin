@@ -42,8 +42,34 @@ body{
 
 function onScanSuccess(decodedText){
 
-  document.getElementById("hasil").innerHTML =
-  "QR terbaca: " + decodedText;
+  fetch(
+    "https://script.google.com/macros/s/AKfycbwLo68xwUnvQogIwIbktbXZi8bHQvN4hfEvxZJ1Y3kidpJq7RfOTmU3PJgISBu5J9Hd/exec",
+    {
+      method:"POST",
+      body:new URLSearchParams({
+        id: decodedText
+      })
+    }
+  )
+  .then(r => r.json())
+  .then(data => {
+
+    if(data.status === "success"){
+      document.getElementById("hasil").innerHTML =
+      "✅ " + data.nama;
+    }
+
+    else if(data.status === "duplicate"){
+      document.getElementById("hasil").innerHTML =
+      "⚠️ " + data.nama + " sudah hadir";
+    }
+
+    else{
+      document.getElementById("hasil").innerHTML =
+      "❌ ID tidak ditemukan";
+    }
+
+  });
 
 }
 
