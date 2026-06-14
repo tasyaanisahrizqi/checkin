@@ -3,7 +3,7 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>CHECK-IN</title>
+<title>Check-in Pernikahan</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 
@@ -52,24 +52,17 @@ body{
 <script>
 
 let audioUnlocked = false;
+let isProcessing = false;
+let html5QrcodeScanner;
 
-// 🔓 unlock audio (WAJIB di HP)
+// 🔓 unlock audio (wajib HP)
 function unlockAudio(){
   if(audioUnlocked) return;
 
-  const sounds = [
-    document.getElementById("beepSuccess"),
-    document.getElementById("beepDuplicate"),
-    document.getElementById("beepError")
-  ];
-
-  sounds.forEach(a => {
-    if(a){
-      a.play().then(() => {
-        a.pause();
-        a.currentTime = 0;
-      }).catch(()=>{});
-    }
+  [beepSuccess, beepDuplicate, beepError].forEach(a => {
+    try{
+      a.play().then(()=>{ a.pause(); a.currentTime = 0; });
+    }catch(e){}
   });
 
   audioUnlocked = true;
@@ -78,7 +71,7 @@ function unlockAudio(){
 document.addEventListener("click", unlockAudio);
 document.addEventListener("touchstart", unlockAudio);
 
-// 🔊 play sound
+// 🔊 sound
 function playSound(type){
   let audio;
 
@@ -95,14 +88,15 @@ function playSound(type){
   if(!audio) return;
 
   audio.currentTime = 0;
-
-  audio.play().catch(err => {
-    console.log("Audio blocked:", err);
-  });
+  audio.play().catch(()=>{});
 }
 
-// 📷 QR scan
+// 📷 scan QR
 function onScanSuccess(decodedText){
+
+  // 🚫 anti double scan
+  if(isProcessing) return;
+  isProcessing = true;
 
   fetch(
     "https://script.google.com/macros/s/AKfycbwLo68xwUnvQogIwIbktbXZi8bHQvN4hfEvxZJ1Y3kidpJq7RfOTmU3PJgISBu5J9Hd/exec",
@@ -137,18 +131,44 @@ function onScanSuccess(decodedText){
       playSound("error");
     }
 
+  })
+  .finally(() => {
+
+    // 📷 STOP scanner sementara (anti spam kamera)
+    if(html5QrcodeScanner){
+      html5QrcodeScanner.clear().then(() => {
+
+        setTimeout(() => {
+
+          // reset lock
+          isProcessing = false;
+
+          // restart scanner
+          html5QrcodeScanner.render(onScanSuccess);
+
+        }, 2000); // jeda 2 detik
+
+      }).catch(()=>{
+
+        isProcessing = false;
+
+      });
+    }
+
   });
 
 }
 
-// 📷 scanner
-new Html5QrcodeScanner(
+// 📷 init scanner
+html5QrcodeScanner = new Html5QrcodeScanner(
   "reader",
   {
     fps:10,
     qrbox:250
   }
-).render(onScanSuccess);
+);
+
+html5QrcodeScanner.render(onScanSuccess);
 
 </script>
 
