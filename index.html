@@ -24,6 +24,7 @@ body{
   font-weight:bold;
 }
 
+/* OVERLAY */
 #overlay{
   position:fixed;
   top:0;left:0;
@@ -35,11 +36,18 @@ body{
   font-weight:bold;
   color:white;
   z-index:9999;
+  animation: fadeIn 0.15s ease-in;
 }
 
 #overlay.success{background:rgba(0,200,0,0.9);}
 #overlay.error{background:rgba(255,0,0,0.9);}
+
+@keyframes fadeIn{
+  from{opacity:0;}
+  to{opacity:1;}
+}
 </style>
+
 </head>
 
 <body>
@@ -50,13 +58,17 @@ body{
 <div id="hasil"></div>
 <div id="overlay"></div>
 
-<!-- AUDIO -->
-<audio id="ok">
-  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
+<!-- 🔊 AUDIO 3 JENIS -->
+<audio id="ok" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
 </audio>
 
-<audio id="no">
-  <source src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg">
+<audio id="dup" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" type="audio/ogg">
+</audio>
+
+<audio id="err" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/notifications/ding.ogg" type="audio/ogg">
 </audio>
 
 <script>
@@ -64,29 +76,47 @@ body{
 let scanner;
 let busy = false;
 
-// 🔊 sound
+// 🔊 SOUND ENGINE
 function sound(type){
-  let a = document.getElementById(type === "ok" ? "ok" : "no");
+
+  let a;
+
+  if(type === "ok"){
+    a = document.getElementById("ok");
+  }
+  else if(type === "dup"){
+    a = document.getElementById("dup");
+  }
+  else{
+    a = document.getElementById("err");
+  }
+
+  if(!a) return;
+
+  a.pause();
   a.currentTime = 0;
+
   a.play().catch(()=>{});
 }
 
-// 🔥 overlay
+// 🔥 OVERLAY
 function show(type, text){
   let o = document.getElementById("overlay");
   o.className = type;
   o.innerHTML = text;
   o.style.display = "flex";
-  setTimeout(()=> o.style.display="none", 800);
+
+  setTimeout(()=>{
+    o.style.display="none";
+  }, 900);
 }
 
-// 📷 INSTANT SCAN
+// 📷 SCAN QR (FAST MODE)
 async function onScanSuccess(decodedText){
 
   if(busy) return;
   busy = true;
 
-  // ⛔ STOP SCANNER SEMENTARA (INI KUNCI SPEED + ANTI DOUBLE)
   await scanner.pause(true);
 
   fetch("https://script.google.com/macros/s/AKfycbwLo68xwUnvQogIwIbktbXZi8bHQvN4hfEvxZJ1Y3kidpJq7RfOTmU3PJgISBu5J9Hd/exec",{
@@ -104,20 +134,19 @@ async function onScanSuccess(decodedText){
 
     else if(data.status === "duplicate"){
       document.getElementById("hasil").innerHTML="⚠️ "+data.nama+" sudah hadir";
-      sound("no");
+      sound("dup");
       show("error","SUDAH HADIR");
     }
 
     else{
       document.getElementById("hasil").innerHTML="❌ ID tidak ditemukan";
-      sound("no");
+      sound("err");
       show("error","TIDAK DITEMUKAN");
     }
 
   })
   .finally(async ()=>{
 
-    // 🚀 langsung hidupkan lagi scanner (NO DELAY FIX)
     await scanner.resume();
     busy = false;
 
@@ -125,7 +154,7 @@ async function onScanSuccess(decodedText){
 
 }
 
-// 📷 init scanner (FAST MODE)
+// 📷 INIT SCANNER
 scanner = new Html5QrcodeScanner("reader",{
   fps: 15,
   qrbox: 250
