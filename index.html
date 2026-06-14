@@ -68,15 +68,15 @@ body{
 </audio>
 
 <audio id="err" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/cartoon/pop.ogg" type="audio/ogg">
+  <source src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg" type="audio/ogg">
 </audio>
 
 <script>
 
-let scanner;
+let html5QrCode;
 let busy = false;
 
-// 🔊 SOUND ENGINE
+// 🔊 SOUND
 function sound(type){
 
   let a;
@@ -111,13 +111,8 @@ function show(type, text){
   }, 900);
 }
 
-// 📷 SCAN QR (CAMERA ONLY)
-async function onScanSuccess(decodedText){
-
-  if(busy) return;
-  busy = true;
-
-  await scanner.pause(true);
+// 📷 HANDLE SCAN RESULT
+function handleResult(decodedText){
 
   fetch("https://script.google.com/macros/s/AKfycbwLo68xwUnvQogIwIbktbXZi8bHQvN4hfEvxZJ1Y3kidpJq7RfOTmU3PJgISBu5J9Hd/exec",{
     method:"POST",
@@ -144,23 +139,44 @@ async function onScanSuccess(decodedText){
       show("error","TIDAK DITEMUKAN");
     }
 
-  })
-  .finally(async ()=>{
-
-    await scanner.resume();
-    busy = false;
-
   });
 
 }
 
-// 📷 INIT CAMERA SCANNER ONLY
-scanner = new Html5QrcodeScanner("reader",{
-  fps: 15,
-  qrbox: 250
-});
+// 📷 CAMERA START (NO MENU, NO IMAGE FILE)
+Html5Qrcode.getCameras().then(devices => {
 
-scanner.render(onScanSuccess);
+  if(devices && devices.length){
+
+    html5QrCode = new Html5Qrcode("reader");
+
+    html5QrCode.start(
+      devices[0].id,
+      {
+        fps: 15,
+        qrbox: 250
+      },
+      (decodedText) => {
+
+        if(busy) return;
+        busy = true;
+
+        html5QrCode.pause(true);
+
+        handleResult(decodedText);
+
+        setTimeout(()=>{
+          html5QrCode.resume();
+          busy = false;
+        }, 600);
+
+      }
+
+    );
+
+  }
+
+});
 
 </script>
 
