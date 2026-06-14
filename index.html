@@ -8,7 +8,7 @@
 
 <style>
 body{
-  font-family:Arial,sans-serif;
+  font-family:Arial;
   text-align:center;
   padding:20px;
 }
@@ -19,8 +19,8 @@ body{
 }
 
 #hasil{
-  margin-top:20px;
-  font-size:24px;
+  font-size:22px;
+  margin-top:15px;
   font-weight:bold;
 }
 
@@ -33,26 +33,13 @@ body{
   align-items:center;
   font-size:40px;
   font-weight:bold;
-  color:white;
+  color:#fff;
   z-index:9999;
-  animation: fadeIn 0.15s ease-in;
 }
 
 #overlay.success{background:rgba(0,200,0,0.9);}
 #overlay.error{background:rgba(255,0,0,0.9);}
-
-@keyframes fadeIn{
-  from{opacity:0;}
-  to{opacity:1;}
-}
-
-button{
-  margin-top:10px;
-  padding:10px 15px;
-  font-size:16px;
-}
 </style>
-
 </head>
 
 <body>
@@ -67,27 +54,28 @@ button{
 <div id="overlay"></div>
 
 <script>
-const MODE = "checkin"; // ganti ke "souvenir"
+
+const MODE = "checkin"; 
+// ubah ke "souvenir" jika perlu
+
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzJVJF6yi7JomWVz8svm44FfZsKVYP8xHQ85SoN_uEhjU9MaQJsQh-onB4NrWz7oPc/exec";
 
 let html5QrCode;
-let cameraList = [];
-let currentCameraIndex = 0;
+let cameras = [];
+let currentCam = 0;
 let busy = false;
 
-// 🔊 SOUND
-function sound(type){
+// 🔊 SOUND SIMPLE (stabil iOS + Android)
+function beep(type){
+  const audio = new Audio(
+    type === "ok"
+      ? "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
+      : type === "dup"
+      ? "https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"
+      : "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg"
+  );
 
-  let audio;
-
-  if(type === "ok") audio = document.getElementById("ok");
-  else if(type === "dup") audio = document.getElementById("dup");
-  else audio = document.getElementById("err");
-
-  if(audio){
-    audio.pause();
-    audio.currentTime = 0;
-    audio.play().catch(()=>{});
-  }
+  audio.play().catch(()=>{});
 }
 
 // 🔥 OVERLAY
@@ -96,14 +84,13 @@ function show(type, text){
   o.className = type;
   o.innerHTML = text;
   o.style.display = "flex";
-
-  setTimeout(()=> o.style.display="none", 900);
+  setTimeout(()=>o.style.display="none",900);
 }
 
-// 📷 HANDLE RESULT
+// 📡 HANDLE RESULT
 function handleResult(decodedText){
 
-  fetch("https://script.google.com/macros/s/AKfycbwLo68xwUnvQogIwIbktbXZi8bHQvN4hfEvxZJ1Y3kidpJq7RfOTmU3PJgISBu5J9Hd/exec",{
+  fetch(SCRIPT_URL,{
     method:"POST",
     body:new URLSearchParams({
       id: decodedText,
@@ -116,75 +103,67 @@ function handleResult(decodedText){
     if(MODE === "checkin"){
 
       if(data.status === "success"){
-        document.getElementById("hasil").innerHTML="✅ "+data.nama;
-        sound("ok");
+        document.getElementById("hasil").innerHTML = "✅ " + data.nama;
+        beep("ok");
         show("success","BERHASIL CHECK-IN");
       }
 
       else if(data.status === "duplicate"){
-        document.getElementById("hasil").innerHTML="⚠️ "+data.nama+" sudah hadir";
-        sound("dup");
+        document.getElementById("hasil").innerHTML = "⚠️ " + data.nama;
+        beep("dup");
         show("error","SUDAH CHECK-IN");
       }
 
       else{
-        document.getElementById("hasil").innerHTML="❌ ID tidak ditemukan";
-        sound("err");
-        show("error","TIDAK VALID");
+        document.getElementById("hasil").innerHTML = "❌ TIDAK VALID";
+        beep("err");
+        show("error","ERROR");
       }
     }
 
     else if(MODE === "souvenir"){
 
       if(data.status === "not_checked_in"){
-        document.getElementById("hasil").innerHTML="❌ "+data.nama+" belum hadir";
-        sound("err");
+        document.getElementById("hasil").innerHTML = "❌ BELUM HADIR";
+        beep("err");
         show("error","BELUM CHECK-IN");
       }
 
       else if(data.status === "already_taken"){
-        document.getElementById("hasil").innerHTML="⚠️ "+data.nama+" sudah ambil souvenir";
-        sound("dup");
+        document.getElementById("hasil").innerHTML = "⚠️ SUDAH AMBIL";
+        beep("dup");
         show("error","SUDAH AMBIL");
       }
 
-      else if(data.status === "success"){
-        document.getElementById("hasil").innerHTML="🎁 "+data.nama;
-        sound("ok");
-        show("success","SOUVENIR DIBERIKAN");
+      else{
+        document.getElementById("hasil").innerHTML = "🎁 " + data.nama;
+        beep("ok");
+        show("success","SOUVENIR OK");
       }
 
-      else{
-        document.getElementById("hasil").innerHTML="❌ ID tidak ditemukan";
-        sound("err");
-        show("error","TIDAK VALID");
-      }
     }
 
   });
 
 }
 
-// 📷 INIT CAMERA (AUTO BACK FIRST)
+// 📷 INIT CAMERA
 Html5Qrcode.getCameras().then(devices => {
 
-  if(devices && devices.length){
+  if(!devices.length) return;
 
-    cameraList = devices;
+  cameras = devices;
 
-    let backIndex = devices.findIndex(cam =>
-      cam.label.toLowerCase().includes("back") ||
-      cam.label.toLowerCase().includes("rear") ||
-      cam.label.toLowerCase().includes("environment")
-    );
+  let back = devices.findIndex(d =>
+    d.label.toLowerCase().includes("back") ||
+    d.label.toLowerCase().includes("environment")
+  );
 
-    currentCameraIndex = backIndex !== -1 ? backIndex : 0;
+  currentCam = back !== -1 ? back : 0;
 
-    html5QrCode = new Html5Qrcode("reader");
+  html5QrCode = new Html5Qrcode("reader");
 
-    startCamera(cameraList[currentCameraIndex]);
-
-  }
+  startCamera(cameras[currentCam]);
 
 });
 
@@ -193,19 +172,15 @@ function startCamera(camera){
 
   html5QrCode.start(
     camera.id,
-    { fps: 20, qrbox: 220 },
-    (decodedText) => {
+    { fps: 18, qrbox: 220 },
+    (decodedText)=>{
 
-      // 🚀 FIX: TANPA PAUSE/RESUME (INI KUNCI STABIL)
       if(busy) return;
       busy = true;
 
       handleResult(decodedText);
 
-      setTimeout(()=>{
-        busy = false;
-      }, 800);
-
+      setTimeout(()=>busy=false,800);
     }
   );
 
@@ -214,32 +189,19 @@ function startCamera(camera){
 // 🔄 SWITCH CAMERA
 function switchCamera(){
 
-  if(cameraList.length < 2) return;
+  if(cameras.length < 2) return;
 
   html5QrCode.stop().then(()=>{
 
-    currentCameraIndex = (currentCameraIndex + 1) % cameraList.length;
+    currentCam = (currentCam + 1) % cameras.length;
 
-    startCamera(cameraList[currentCameraIndex]);
+    startCamera(cameras[currentCam]);
 
   });
 
 }
 
 </script>
-
-<!-- AUDIO -->
-<audio id="ok" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
-</audio>
-
-<audio id="dup" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg">
-</audio>
-
-<audio id="err" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg">
-</audio>
 
 </body>
 </html>
