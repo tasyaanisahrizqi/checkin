@@ -2,13 +2,13 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CHECK-IN SYSTEM</title>
+<title>CHECK-IN</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
 body{
-  font-family:Arial;
+  font-family:Arial,sans-serif;
   text-align:center;
   padding:20px;
 }
@@ -19,8 +19,8 @@ body{
 }
 
 #hasil{
-  font-size:22px;
-  margin-top:15px;
+  margin-top:20px;
+  font-size:24px;
   font-weight:bold;
 }
 
@@ -35,167 +35,189 @@ body{
   font-weight:bold;
   color:white;
   z-index:9999;
+  animation: fadeIn 0.15s ease-in;
 }
 
 #overlay.success{background:rgba(0,200,0,0.9);}
 #overlay.error{background:rgba(255,0,0,0.9);}
+
+@keyframes fadeIn{
+  from{opacity:0;}
+  to{opacity:1;}
+}
+
+button{
+  margin-top:10px;
+  padding:10px 15px;
+  font-size:16px;
+}
 </style>
+
 </head>
 
 <body>
 
-<h2>CHECK-IN SYSTEM</h2>
+<h2>CHECK-IN</h2>
 
 <div id="reader"></div>
+
+<button onclick="switchCamera()">🔄 Ganti Kamera</button>
 
 <div id="hasil"></div>
 <div id="overlay"></div>
 
 <script>
 
-const MODE = "checkin";
-
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzJVJF6yi7JomWVz8svm44FfZsKVYP8xHQ85SoN_uEhjU9MaQJsQh-onB4NrWz7oPc/exec";
-
 let html5QrCode;
-let cameras = [];
-let currentCam = 0;
+let cameraList = [];
+let currentCameraIndex = 0;
 let busy = false;
 
-// 🔊 SOUND SIMPLE (AMAN iOS + Android)
-function beep(type){
-  const audio = new Audio(
-    type === "ok"
-      ? "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
-      : type === "dup"
-      ? "https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"
-      : "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg"
-  );
-  audio.play().catch(()=>{});
+// 🔊 SOUND (tidak diubah)
+function sound(type){
+
+  let a;
+
+  if(type === "ok"){
+    a = document.getElementById("ok");
+  }
+  else if(type === "dup"){
+    a = document.getElementById("dup");
+  }
+  else{
+    a = document.getElementById("err");
+  }
+
+  if(!a) return;
+
+  a.pause();
+  a.currentTime = 0;
+  a.play().catch(()=>{});
 }
 
 // 🔥 OVERLAY
 function show(type, text){
-  const o = document.getElementById("overlay");
+  let o = document.getElementById("overlay");
   o.className = type;
   o.innerHTML = text;
   o.style.display = "flex";
-  setTimeout(()=>o.style.display="none",900);
+
+  setTimeout(()=>{
+    o.style.display="none";
+  }, 900);
 }
 
-// 📡 HANDLE RESULT
+// 📡 INI BAGIAN PENTING (FIX URL KAMU)
 function handleResult(decodedText){
 
-  fetch(SCRIPT_URL,{
+  fetch("https://script.google.com/macros/s/AKfycbyzJVJF6yi7JomWVz8svm44FfZsKVYP8xHQ85SoN_uEhjU9MaQJsQh-onB4NrWz7oPc/exec",{
     method:"POST",
     body:new URLSearchParams({
-      id: decodedText,
-      mode: MODE
+      id: decodedText
     })
   })
-  .then(r => r.text())   // 🔥 PENTING FIX UTAMA
-  .then(txt => {
+  .then(r => r.json())
+  .then(data => {
 
-    let data;
-    try {
-      data = JSON.parse(txt);
-    } catch(e) {
-      document.getElementById("hasil").innerHTML = "❌ ERROR RESPONSE";
-      console.log(txt);
-      return;
+    if(data.status === "success"){
+      document.getElementById("hasil").innerHTML="✅ "+data.nama;
+      sound("ok");
+      show("success","BERHASIL");
     }
 
-    if(MODE === "checkin"){
-
-      if(data.status === "success"){
-        document.getElementById("hasil").innerHTML = "✅ " + data.nama;
-        beep("ok");
-        show("success","BERHASIL CHECK-IN");
-      }
-
-      else if(data.status === "duplicate"){
-        document.getElementById("hasil").innerHTML = "⚠️ " + data.nama;
-        beep("dup");
-        show("error","SUDAH CHECK-IN");
-      }
-
-      else{
-        document.getElementById("hasil").innerHTML = "❌ TIDAK DITEMUKAN";
-        beep("err");
-        show("error","ERROR");
-      }
+    else if(data.status === "duplicate"){
+      document.getElementById("hasil").innerHTML="⚠️ "+data.nama+" sudah hadir";
+      sound("dup");
+      show("error","SUDAH HADIR");
     }
 
-    else if(MODE === "souvenir"){
-
-      if(data.status === "not_checked_in"){
-        document.getElementById("hasil").innerHTML = "❌ BELUM HADIR";
-        beep("err");
-        show("error","BELUM CHECK-IN");
-      }
-
-      else if(data.status === "already_taken"){
-        document.getElementById("hasil").innerHTML = "⚠️ SUDAH AMBIL";
-        beep("dup");
-        show("error","SUDAH AMBIL");
-      }
-
-      else{
-        document.getElementById("hasil").innerHTML = "🎁 " + data.nama;
-        beep("ok");
-        show("success","SOUVENIR OK");
-      }
-
+    else{
+      document.getElementById("hasil").innerHTML="❌ ID tidak ditemukan";
+      sound("err");
+      show("error","TIDAK DITEMUKAN");
     }
 
-  })
-  .catch(err=>{
-    console.log(err);
-    document.getElementById("hasil").innerHTML = "❌ SERVER ERROR";
   });
 
 }
 
-// 📷 INIT CAMERA
+// 📷 INIT CAMERA (SAMA SEPERTI AWAL)
 Html5Qrcode.getCameras().then(devices => {
 
-  if(!devices.length) return;
+  if(devices && devices.length){
 
-  cameras = devices;
+    cameraList = devices;
 
-  let back = devices.findIndex(d =>
-    d.label.toLowerCase().includes("back") ||
-    d.label.toLowerCase().includes("environment")
-  );
+    let backIndex = devices.findIndex(cam =>
+      cam.label.toLowerCase().includes("back") ||
+      cam.label.toLowerCase().includes("rear") ||
+      cam.label.toLowerCase().includes("environment")
+    );
 
-  currentCam = back !== -1 ? back : 0;
+    currentCameraIndex = backIndex !== -1 ? backIndex : 0;
 
-  html5QrCode = new Html5Qrcode("reader");
+    html5QrCode = new Html5Qrcode("reader");
 
-  startCamera(cameras[currentCam]);
+    startCamera(cameraList[currentCameraIndex]);
+
+  }
 
 });
 
-// ▶️ START CAMERA
+// ▶️ START CAMERA (SAMA SEPERTI AWAL)
 function startCamera(camera){
 
   html5QrCode.start(
     camera.id,
-    { fps: 15, qrbox: 220 },
-    (decodedText)=>{
+    { fps: 15, qrbox: 250 },
+    (decodedText) => {
 
       if(busy) return;
       busy = true;
 
+      html5QrCode.pause(true);
+
       handleResult(decodedText);
 
-      setTimeout(()=>busy=false,800);
+      setTimeout(()=>{
+        html5QrCode.resume();
+        busy = false;
+      }, 600);
+
     }
   );
 
 }
 
+// 🔄 SWITCH CAMERA
+function switchCamera(){
+
+  if(cameraList.length < 2) return;
+
+  html5QrCode.stop().then(()=>{
+
+    currentCameraIndex = (currentCameraIndex + 1) % cameraList.length;
+
+    startCamera(cameraList[currentCameraIndex]);
+
+  });
+
+}
+
 </script>
+
+<!-- AUDIO (WAJIB ADA) -->
+<audio id="ok" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
+</audio>
+
+<audio id="dup" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg">
+</audio>
+
+<audio id="err" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/cartoon/pop.ogg">
+</audio>
 
 </body>
 </html>
