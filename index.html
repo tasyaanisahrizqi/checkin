@@ -8,7 +8,7 @@
 
 <style>
 body{
-  font-family:Arial;
+  font-family:Arial,sans-serif;
   text-align:center;
   padding:20px;
 }
@@ -24,6 +24,7 @@ body{
   font-weight:bold;
 }
 
+/* OVERLAY */
 #overlay{
   position:fixed;
   top:0;left:0;
@@ -35,10 +36,22 @@ body{
   font-weight:bold;
   color:white;
   z-index:9999;
+  animation: fadeIn 0.15s ease-in;
 }
 
 #overlay.success{background:rgba(0,200,0,0.9);}
 #overlay.error{background:rgba(255,0,0,0.9);}
+
+@keyframes fadeIn{
+  from{opacity:0;}
+  to{opacity:1;}
+}
+
+button{
+  margin-top:10px;
+  padding:10px 15px;
+  font-size:16px;
+}
 </style>
 
 </head>
@@ -48,19 +61,23 @@ body{
 <h2>CHECK-IN</h2>
 
 <div id="reader"></div>
+
+<button onclick="switchCamera()">🔄 Ganti Kamera</button>
+
 <div id="hasil"></div>
 <div id="overlay"></div>
 
+<!-- 🔊 AUDIO -->
 <audio id="ok" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
+  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
 </audio>
 
 <audio id="dup" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg">
+  <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" type="audio/ogg">
 </audio>
 
 <audio id="err" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/cartoon/pop.ogg">
+  <source src="https://actions.google.com/sounds/v1/cartoon/pop.ogg" type="audio/ogg">
 </audio>
 
 <script>
@@ -70,45 +87,58 @@ let cameraList = [];
 let currentCameraIndex = 0;
 let busy = false;
 
-// SOUND
+// 🔊 SOUND
 function sound(type){
-  let a =
-    type === "ok" ? document.getElementById("ok") :
-    type === "dup" ? document.getElementById("dup") :
-    document.getElementById("err");
+
+  let a;
+
+  if(type === "ok"){
+    a = document.getElementById("ok");
+  }
+  else if(type === "dup"){
+    a = document.getElementById("dup");
+  }
+  else{
+    a = document.getElementById("err");
+  }
+
+  if(!a) return;
 
   a.pause();
   a.currentTime = 0;
+
   a.play().catch(()=>{});
 }
 
-// OVERLAY
-function show(type,text){
-  let o=document.getElementById("overlay");
-  o.className=type;
-  o.innerHTML=text;
-  o.style.display="flex";
+// 🔥 OVERLAY
+function show(type, text){
+  let o = document.getElementById("overlay");
+  o.className = type;
+  o.innerHTML = text;
+  o.style.display = "flex";
 
-  setTimeout(()=>o.style.display="none",900);
+  setTimeout(()=>{
+    o.style.display="none";
+  }, 900);
 }
 
-// FETCH
+// 📷 HANDLE RESULT
 function handleResult(decodedText){
 
-  fetch("https://script.google.com/macros/s/AKfycbxtCw1dooE8WQzb6PKUNIRr8FT2bkzzEfCUJtyj627SE48sgInj6IY7Z2UV4y8RtYksUQ/exec",{
+  fetch("https://script.google.com/macros/s/AKfycbwLo68xwUnvQogIwIbktbXZi8bHQvN4hfEvxZJ1Y3kidpJq7RfOTmU3PJgISBu5J9Hd/exec",{
     method:"POST",
     body:new URLSearchParams({id:decodedText})
   })
   .then(r=>r.json())
   .then(data=>{
 
-    if(data.status==="success"){
+    if(data.status === "success"){
       document.getElementById("hasil").innerHTML="✅ "+data.nama;
       sound("ok");
       show("success","BERHASIL");
     }
 
-    else if(data.status==="duplicate"){
+    else if(data.status === "duplicate"){
       document.getElementById("hasil").innerHTML="⚠️ "+data.nama+" sudah hadir";
       sound("dup");
       show("error","SUDAH HADIR");
@@ -124,34 +154,39 @@ function handleResult(decodedText){
 
 }
 
-// CAMERA INIT
-Html5Qrcode.getCameras().then(devices=>{
+// 📷 INIT CAMERA (AUTO BACK FIRST)
+Html5Qrcode.getCameras().then(devices => {
 
-  cameraList=devices;
+  if(devices && devices.length){
 
-  let backIndex = devices.findIndex(c =>
-    c.label.toLowerCase().includes("back") ||
-    c.label.toLowerCase().includes("rear") ||
-    c.label.toLowerCase().includes("environment")
-  );
+    cameraList = devices;
 
-  currentCameraIndex = backIndex !== -1 ? backIndex : 0;
+    let backIndex = devices.findIndex(cam =>
+      cam.label.toLowerCase().includes("back") ||
+      cam.label.toLowerCase().includes("rear") ||
+      cam.label.toLowerCase().includes("environment")
+    );
 
-  html5QrCode = new Html5Qrcode("reader");
+    currentCameraIndex = backIndex !== -1 ? backIndex : 0;
 
-  startCamera(cameraList[currentCameraIndex]);
+    html5QrCode = new Html5Qrcode("reader");
+
+    startCamera(cameraList[currentCameraIndex]);
+
+  }
 
 });
 
+// ▶️ START CAMERA
 function startCamera(camera){
 
   html5QrCode.start(
     camera.id,
-    {fps:15, qrbox:250},
-    (decodedText)=>{
+    { fps: 15, qrbox: 250 },
+    (decodedText) => {
 
       if(busy) return;
-      busy=true;
+      busy = true;
 
       html5QrCode.pause(true);
 
@@ -159,11 +194,27 @@ function startCamera(camera){
 
       setTimeout(()=>{
         html5QrCode.resume();
-        busy=false;
-      },600);
+        busy = false;
+      }, 600);
 
     }
   );
+
+}
+
+// 🔄 SWITCH CAMERA
+function switchCamera(){
+
+  if(cameraList.length < 2) return;
+
+  html5QrCode.stop().then(()=>{
+
+    currentCameraIndex = (currentCameraIndex + 1) % cameraList.length;
+
+    startCamera(cameraList[currentCameraIndex]);
+
+  });
+
 }
 
 </script>
