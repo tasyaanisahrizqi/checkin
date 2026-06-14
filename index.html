@@ -3,7 +3,7 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Check-in Pernikahan</title>
+<title>CHECK-IN</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 
@@ -25,7 +25,7 @@ body{
   font-weight:bold;
 }
 
-/* 🔥 FULL SCREEN OVERLAY */
+/* 🔥 OVERLAY */
 #overlay{
   position:fixed;
   top:0;
@@ -62,22 +62,23 @@ body{
 
 <h2>Check-in Pernikahan</h2>
 
+<p>Tap layar sekali sebelum scan</p>
+
 <div id="reader"></div>
 <div id="hasil"></div>
 
-<!-- 🔥 OVERLAY -->
 <div id="overlay"></div>
 
 <!-- 🔊 AUDIO -->
-<audio id="beepSuccess">
+<audio id="beepSuccess" preload="auto">
   <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
 </audio>
 
-<audio id="beepDuplicate">
+<audio id="beepDuplicate" preload="auto">
   <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" type="audio/ogg">
 </audio>
 
-<audio id="beepError">
+<audio id="beepError" preload="auto">
   <source src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" type="audio/ogg">
 </audio>
 
@@ -87,14 +88,23 @@ let audioUnlocked = false;
 let isProcessing = false;
 let scanner;
 
-// 🔓 unlock audio (HP wajib tap dulu)
+// 🔓 unlock audio (WAJIB untuk HP)
 function unlockAudio(){
   if(audioUnlocked) return;
 
-  [beepSuccess, beepDuplicate, beepError].forEach(a => {
-    try{
-      a.play().then(()=>{ a.pause(); a.currentTime = 0; });
-    }catch(e){}
+  const sounds = [
+    document.getElementById("beepSuccess"),
+    document.getElementById("beepDuplicate"),
+    document.getElementById("beepError")
+  ];
+
+  sounds.forEach(a => {
+    if(a){
+      a.play().then(() => {
+        a.pause();
+        a.currentTime = 0;
+      }).catch(()=>{});
+    }
   });
 
   audioUnlocked = true;
@@ -103,7 +113,7 @@ function unlockAudio(){
 document.addEventListener("click", unlockAudio);
 document.addEventListener("touchstart", unlockAudio);
 
-// 🔊 sound
+// 🔊 PLAY SOUND
 function playSound(type){
   let audio;
 
@@ -119,11 +129,15 @@ function playSound(type){
 
   if(!audio) return;
 
+  audio.pause();
   audio.currentTime = 0;
-  audio.play().catch(()=>{});
+
+  audio.play().catch(err => {
+    console.log("Audio blocked:", err);
+  });
 }
 
-// 🔥 overlay animasi
+// 🔥 OVERLAY
 function showOverlay(type, text){
   const overlay = document.getElementById("overlay");
 
@@ -136,7 +150,7 @@ function showOverlay(type, text){
   }, 1200);
 }
 
-// 📷 scan QR
+// 📷 QR SCAN
 function onScanSuccess(decodedText){
 
   if(isProcessing) return;
@@ -181,7 +195,6 @@ function onScanSuccess(decodedText){
   })
   .finally(() => {
 
-    // ⏳ cooldown anti double scan
     setTimeout(() => {
       isProcessing = false;
     }, 2000);
@@ -190,7 +203,7 @@ function onScanSuccess(decodedText){
 
 }
 
-// 📷 init scanner
+// 📷 INIT SCANNER
 scanner = new Html5QrcodeScanner(
   "reader",
   {
