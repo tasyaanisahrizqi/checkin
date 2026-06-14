@@ -36,7 +36,7 @@ body{
 
 <div id="hasil"></div>
 
-<!-- 🔊 SUARA -->
+<!-- 🔊 AUDIO -->
 <audio id="beepSuccess">
   <source src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" type="audio/ogg">
 </audio>
@@ -51,7 +51,34 @@ body{
 
 <script>
 
-// 🔊 fungsi bunyi
+let audioUnlocked = false;
+
+// 🔓 unlock audio (WAJIB di HP)
+function unlockAudio(){
+  if(audioUnlocked) return;
+
+  const sounds = [
+    document.getElementById("beepSuccess"),
+    document.getElementById("beepDuplicate"),
+    document.getElementById("beepError")
+  ];
+
+  sounds.forEach(a => {
+    if(a){
+      a.play().then(() => {
+        a.pause();
+        a.currentTime = 0;
+      }).catch(()=>{});
+    }
+  });
+
+  audioUnlocked = true;
+}
+
+document.addEventListener("click", unlockAudio);
+document.addEventListener("touchstart", unlockAudio);
+
+// 🔊 play sound
 function playSound(type){
   let audio;
 
@@ -65,12 +92,16 @@ function playSound(type){
     audio = document.getElementById("beepError");
   }
 
-  audio.play().catch(() => {
-    document.body.addEventListener("click", () => audio.play(), { once: true });
+  if(!audio) return;
+
+  audio.currentTime = 0;
+
+  audio.play().catch(err => {
+    console.log("Audio blocked:", err);
   });
 }
 
-// 📷 scan QR
+// 📷 QR scan
 function onScanSuccess(decodedText){
 
   fetch(
@@ -110,7 +141,7 @@ function onScanSuccess(decodedText){
 
 }
 
-// 📷 kamera scanner
+// 📷 scanner
 new Html5QrcodeScanner(
   "reader",
   {
