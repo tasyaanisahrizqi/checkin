@@ -24,7 +24,6 @@ body{
   font-weight:bold;
 }
 
-/* OVERLAY */
 #overlay{
   position:fixed;
   top:0;left:0;
@@ -67,19 +66,6 @@ button{
 <div id="hasil"></div>
 <div id="overlay"></div>
 
-<!-- 🔊 AUDIO -->
-<audio id="ok" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
-</audio>
-
-<audio id="dup" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" type="audio/ogg">
-</audio>
-
-<audio id="err" preload="auto">
-  <source src="https://actions.google.com/sounds/v1/cartoon/pop.ogg" type="audio/ogg">
-</audio>
-
 <script>
 
 let html5QrCode;
@@ -87,7 +73,7 @@ let cameraList = [];
 let currentCameraIndex = 0;
 let busy = false;
 
-// 🔊 SOUND
+// 🔊 SOUND (tidak diubah)
 function sound(type){
 
   let a;
@@ -106,7 +92,6 @@ function sound(type){
 
   a.pause();
   a.currentTime = 0;
-
   a.play().catch(()=>{});
 }
 
@@ -122,15 +107,17 @@ function show(type, text){
   }, 900);
 }
 
-// 📷 HANDLE RESULT
+// 📡 INI BAGIAN PENTING (FIX URL KAMU)
 function handleResult(decodedText){
 
-  fetch("https://script.google.com/macros/s/AKfycbwLo68xwUnvQogIwIbktbXZi8bHQvN4hfEvxZJ1Y3kidpJq7RfOTmU3PJgISBu5J9Hd/exec",{
+  fetch("https://script.google.com/macros/s/AKfycbyzJVJF6yi7JomWVz8svm44FfZsKVYP8xHQ85SoN_uEhjU9MaQJsQh-onB4NrWz7oPc/exec",{
     method:"POST",
-    body:new URLSearchParams({id:decodedText})
+    body:new URLSearchParams({
+      id: decodedText
+    })
   })
-  .then(r=>r.json())
-  .then(data=>{
+  .then(r => r.json())
+  .then(data => {
 
     if(data.status === "success"){
       document.getElementById("hasil").innerHTML="✅ "+data.nama;
@@ -154,7 +141,7 @@ function handleResult(decodedText){
 
 }
 
-// 📷 INIT CAMERA (AUTO BACK FIRST)
+// 📷 INIT CAMERA (SAMA SEPERTI AWAL)
 Html5Qrcode.getCameras().then(devices => {
 
   if(devices && devices.length){
@@ -177,7 +164,7 @@ Html5Qrcode.getCameras().then(devices => {
 
 });
 
-// ▶️ START CAMERA
+// ▶️ START CAMERA (SAMA SEPERTI AWAL)
 function startCamera(camera){
 
   html5QrCode.start(
@@ -218,6 +205,19 @@ function switchCamera(){
 }
 
 </script>
+
+<!-- AUDIO (WAJIB ADA) -->
+<audio id="ok" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
+</audio>
+
+<audio id="dup" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg">
+</audio>
+
+<audio id="err" preload="auto">
+  <source src="https://actions.google.com/sounds/v1/cartoon/pop.ogg">
+</audio>
 
 </body>
 </html>
