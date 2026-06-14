@@ -8,7 +8,6 @@
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
-
 body{
   font-family:Arial,sans-serif;
   text-align:center;
@@ -25,7 +24,6 @@ body{
   font-size:24px;
   font-weight:bold;
 }
-
 </style>
 
 </head>
@@ -38,8 +36,41 @@ body{
 
 <div id="hasil"></div>
 
+<!-- 🔊 SUARA -->
+<audio id="beepSuccess">
+  <source src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg" type="audio/ogg">
+</audio>
+
+<audio id="beepDuplicate">
+  <source src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg" type="audio/ogg">
+</audio>
+
+<audio id="beepError">
+  <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
+</audio>
+
 <script>
 
+// 🔊 fungsi bunyi
+function playSound(type){
+  let audio;
+
+  if(type === "success"){
+    audio = document.getElementById("beepSuccess");
+  }
+  else if(type === "duplicate"){
+    audio = document.getElementById("beepDuplicate");
+  }
+  else{
+    audio = document.getElementById("beepError");
+  }
+
+  audio.play().catch(() => {
+    document.body.addEventListener("click", () => audio.play(), { once: true });
+  });
+}
+
+// 📷 scan QR
 function onScanSuccess(decodedText){
 
   fetch(
@@ -57,22 +88,29 @@ function onScanSuccess(decodedText){
     if(data.status === "success"){
       document.getElementById("hasil").innerHTML =
       "✅ " + data.nama;
+
+      playSound("success");
     }
 
     else if(data.status === "duplicate"){
       document.getElementById("hasil").innerHTML =
       "⚠️ " + data.nama + " sudah hadir";
+
+      playSound("duplicate");
     }
 
     else{
       document.getElementById("hasil").innerHTML =
       "❌ ID tidak ditemukan";
+
+      playSound("error");
     }
 
   });
 
 }
 
+// 📷 kamera scanner
 new Html5QrcodeScanner(
   "reader",
   {
