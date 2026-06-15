@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SOUVENIR</title>
 
-<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <style>
 body{
@@ -24,7 +24,6 @@ body{
   font-weight:bold;
 }
 
-/* OVERLAY */
 #overlay{
   position:fixed;
   top:0;left:0;
@@ -46,12 +45,6 @@ body{
   from{opacity:0;}
   to{opacity:1;}
 }
-
-button{
-  margin-top:10px;
-  padding:10px 15px;
-  font-size:16px;
-}
 </style>
 
 </head>
@@ -62,19 +55,14 @@ button{
 
 <div id="reader"></div>
 
-<button onclick="switchCamera()">🔄 Ganti Kamera</button>
-
 <div id="hasil"></div>
 <div id="overlay"></div>
 
 <script>
 
 let html5QrCode;
-let cameraList = [];
-let currentCameraIndex = 0;
 let busy = false;
 
-// 🔊 SOUND (SAMA PERSIS)
 function sound(type){
 
   let a;
@@ -96,7 +84,6 @@ function sound(type){
   a.play().catch(()=>{});
 }
 
-// 🔥 OVERLAY
 function show(type, text){
   let o = document.getElementById("overlay");
   o.className = type;
@@ -108,7 +95,6 @@ function show(type, text){
   }, 900);
 }
 
-// 📡 HANDLE RESULT (SOUVENIR MODE)
 function handleResult(decodedText){
 
   fetch("https://script.google.com/macros/s/AKfycbxtCw1dooE8WQzb6PKUNIRr8FT2bkzzEfCUJtyj627SE48sgInj6IY7Z2UV4y8RtYksUQ/exec",{
@@ -149,72 +135,34 @@ function handleResult(decodedText){
 
 }
 
-// 📷 INIT CAMERA (SAMA PERSIS DENGAN INDEX.HTML)
-Html5Qrcode.getCameras().then(devices => {
+html5QrCode = new Html5Qrcode("reader");
 
-  if(devices && devices.length){
+html5QrCode.start(
+  { facingMode: "environment" },
+  { fps: 15, qrbox: 250 },
+  (decodedText) => {
 
-    cameraList = devices;
+    if(busy) return;
 
-    let backIndex = devices.findIndex(cam =>
-      cam.label.toLowerCase().includes("back") ||
-      cam.label.toLowerCase().includes("rear") ||
-      cam.label.toLowerCase().includes("environment")
-    );
+    busy = true;
 
-    currentCameraIndex = backIndex !== -1 ? backIndex : 0;
+    html5QrCode.pause(true);
 
-    html5QrCode = new Html5Qrcode("reader");
+    handleResult(decodedText);
 
-    startCamera(cameraList[currentCameraIndex]);
+    setTimeout(()=>{
+      html5QrCode.resume();
+      busy = false;
+    }, 600);
 
   }
-
+)
+.catch(err => {
+  console.error("Camera error:", err);
 });
-
-// ▶️ START CAMERA
-function startCamera(camera){
-
-  html5QrCode.start(
-    camera.id,
-    { fps: 15, qrbox: 250 },
-    (decodedText) => {
-
-      if(busy) return;
-      busy = true;
-
-      html5QrCode.pause(true);
-
-      handleResult(decodedText);
-
-      setTimeout(()=>{
-        html5QrCode.resume();
-        busy = false;
-      }, 600);
-
-    }
-  );
-
-}
-
-// 🔄 SWITCH CAMERA
-function switchCamera(){
-
-  if(cameraList.length < 2) return;
-
-  html5QrCode.stop().then(()=>{
-
-    currentCameraIndex = (currentCameraIndex + 1) % cameraList.length;
-
-    startCamera(cameraList[currentCameraIndex]);
-
-  });
-
-}
 
 </script>
 
-<!-- AUDIO (WAJIB SAMA) -->
 <audio id="ok" preload="auto">
   <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
 </audio>
