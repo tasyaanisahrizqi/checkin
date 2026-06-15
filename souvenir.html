@@ -177,7 +177,7 @@ function startCamera(camera){
 
   html5QrCode.start(
     camera.id,
-    { fps: 25, qrbox: 250 },
+    { fps: 15, qrbox: 250 },
     (decodedText) => {
 
       if(busy) return;
