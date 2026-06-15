@@ -4,7 +4,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CHECK-IN</title>
 
-<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 
 <style>
 body{
@@ -45,12 +45,6 @@ body{
   from{opacity:0;}
   to{opacity:1;}
 }
-
-button{
-  margin-top:10px;
-  padding:10px 15px;
-  font-size:16px;
-}
 </style>
 
 </head>
@@ -61,8 +55,6 @@ button{
 
 <div id="reader"></div>
 
-<button onclick="switchCamera()">🔄 Ganti Kamera</button>
-
 <div id="hasil"></div>
 <div id="overlay"></div>
 
@@ -71,8 +63,6 @@ button{
 const MODE = "checkin";
 
 let html5QrCode;
-let cameraList = [];
-let currentCameraIndex = 0;
 let busy = false;
 
 function sound(type){
@@ -141,65 +131,34 @@ function handleResult(decodedText){
 
 }
 
-Html5Qrcode.getCameras().then(devices => {
+html5QrCode = new Html5Qrcode("reader");
 
-  cameraList = devices;
+html5QrCode.start(
+  { facingMode: "environment" },
+  { fps: 15, qrbox: 250 },
+  (decodedText) => {
 
-  let backIndex = devices.findIndex(cam =>
-    cam.label.toLowerCase().includes("back") ||
-    cam.label.toLowerCase().includes("rear") ||
-    cam.label.toLowerCase().includes("environment")
-  );
+    if(busy) return;
 
-  currentCameraIndex = backIndex !== -1 ? backIndex : 0;
+    busy = true;
 
-  html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.pause(true);
 
-  startCamera(cameraList[currentCameraIndex]);
+    handleResult(decodedText);
 
+    setTimeout(()=>{
+      html5QrCode.resume();
+      busy = false;
+    }, 600);
+
+  }
+)
+.catch(err => {
+  console.error("Camera error:", err);
 });
-
-function startCamera(camera){
-
-  html5QrCode.start(
-    camera.id,
-    { fps: 15, qrbox: 250 },
-    (decodedText) => {
-
-      if(busy) return;
-      busy = true;
-
-      html5QrCode.pause(true);
-
-      handleResult(decodedText);
-
-      setTimeout(()=>{
-        html5QrCode.resume();
-        busy = false;
-      }, 600);
-
-    }
-  );
-
-}
-
-function switchCamera(){
-
-  if(cameraList.length < 2) return;
-
-  html5QrCode.stop().then(()=>{
-
-    currentCameraIndex = (currentCameraIndex + 1) % cameraList.length;
-
-    startCamera(cameraList[currentCameraIndex]);
-
-  });
-
-}
 
 </script>
 
-<!-- AUDIO -->
 <audio id="ok" preload="auto">
   <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg">
 </audio>
